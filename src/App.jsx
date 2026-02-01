@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState , useEffect } from "react";
 import SearchBar from "./components/SearchBar";
 import ErrorMessage from "./components/ErrorMessage";
 import WeatherCard from "./components/WeatherCard";
+import Loader from "./components/Loader";
 
 
 const API_KEY = import.meta.env.VITE_WEATHER_API_KEY;
@@ -43,8 +44,41 @@ export default function App() {
   }
 };
 
+  const fetchWeatherByLocation = async (lat, lon) => {
+    try {
+      setLoading(true);
+      setError(false);
 
+      const response = await fetch(
+        `${API_URL}&lat=${lat}&lon=${lon}&appid=${API_KEY}`
+      );
 
+      if (!response.ok) {
+        throw new Error("Location not found");
+      }
+
+      const data = await response.json();
+      setWeather(data);
+    } catch (err) {
+      console.error(err.message);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          fetchWeatherByLocation(latitude, longitude);
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+        }
+      );
+    }
+  }, []);
   return (
     <div className="card fade-in">
       <SearchBar
@@ -53,7 +87,7 @@ export default function App() {
         onSearch={() => checkWeather(city)}
       />
 
-      {loading && <p className="loading">Loading...</p>}
+      {loading && <Loader />}
       {error && <ErrorMessage />}
       {weather && !error && <WeatherCard data={weather} />}
     </div>
